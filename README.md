@@ -1,11 +1,43 @@
-<div align="center">
+# Detricon Webview Wrapper
 
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
+This project is a high-performance webview wrapper for [Detricon Messenger](https://detricon-messenger.vercel.app/).
 
-  <h1>Built with AI Studio</h2>
+## Features
+- **PWA Support**: Can be "installed" on Android/iOS/Desktop directly from the browser.
+- **Splash Screen**: Professional loading experience.
+- **Offline Detection**: Graceful handling of connectivity issues.
+- **Native-like UI**: Minimalist wrapper that lets the content shine.
 
-  <p>The fastest path from prompt to production with Gemini.</p>
+## How to Install on Android (PWA Method)
+1. Open the App URL in **Google Chrome** on your Android device.
+2. Tap the three dots (menu) in the top right corner.
+3. Select **"Add to Home screen"** or **"Install app"**.
+4. Detricon will now appear in your app drawer and behave like a native app.
 
-  <a href="https://aistudio.google.com/apps">Start building</a>
+## How to Build a Native APK (Advanced)
+If you specifically need a `.apk` file, you can use **Capacitor** with this project:
 
-</div>
+1. Install dependencies:
+   ```bash
+   npm install @capacitor/core @capacitor/cli @capacitor/android
+   ```
+2. Initialize Capacitor:
+   ```bash
+   npx cap init
+   ```
+3. Build the web project:
+   ```bash
+   npm run build
+   ```
+4. Add Android platform:
+   ```bash
+   npx cap add android
+   ```
+5. Open in Android Studio to build the APK:
+   ```bash
+   npx cap open android
+   ```
+
+## Configuration
+The target URL is configured in `src/App.tsx`.
+Current target: `https://detricon-messenger.vercel.app/`

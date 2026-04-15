@@ -1,0 +1,6 @@
+{
+  "name": "Detricon",
+  "description": "A high-performance webview wrapper for Detricon Messenger, optimized for mobile and desktop experiences.",
+  "requestFramePermissions": [],
+  "majorCapabilities": []
+}
