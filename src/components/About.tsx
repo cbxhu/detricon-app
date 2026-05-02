@@ -1,5 +1,5 @@
 import { motion } from 'motion/react';
-import { ArrowLeft, Shield, Zap, Bell, Smartphone, Globe } from 'lucide-react';
+import { ArrowLeft, Shield, Zap, Bell, Smartphone, Globe, RefreshCw } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 export default function About() {
@@ -28,11 +28,16 @@ export default function About() {
       icon: <Globe className="text-cyan-400" />,
       title: "PWA Support",
       description: "Installable on any device directly from your browser."
+    },
+    {
+      icon: <RefreshCw className="text-orange-400" />,
+      title: "Auto-Updates",
+      description: "Automatically check for and install the latest APK releases from GitHub."
     }
   ];
 
   return (
-    <div className="min-h-screen bg-black text-white font-sans selection:bg-white/20">
+    <div className="min-h-screen bg-black text-white font-sans selection:bg-white/20 pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
       {/* Header */}
       <header className="sticky top-0 z-50 bg-black/80 backdrop-blur-xl border-b border-white/10 px-6 py-4 flex items-center gap-4">
         <Link to="/" className="p-2 hover:bg-white/10 rounded-full transition-colors">
@@ -61,29 +66,47 @@ export default function About() {
         {/* Features Grid */}
         <section className="grid gap-6 mb-16">
           <h3 className="text-sm font-bold uppercase tracking-[0.2em] text-zinc-500 mb-2">Core Features</h3>
-          {features.map((feature, index) => (
-            <motion.div 
-              key={index}
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: index * 0.1 }}
-              className="group p-6 rounded-2xl bg-zinc-900/50 border border-white/5 hover:border-white/10 transition-all"
-            >
-              <div className="flex gap-4 items-start">
-                <div className="p-3 rounded-xl bg-white/5 group-hover:bg-white/10 transition-colors">
-                  {feature.icon}
+          <div className="grid gap-4">
+            {features.map((feature, index) => (
+              <motion.div 
+                key={index}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, margin: "-50px" }}
+                transition={{ 
+                  duration: 0.5, 
+                  delay: index * 0.1,
+                  ease: [0.21, 1.02, 0.47, 0.98] 
+                }}
+                whileHover={{ scale: 1.02, backgroundColor: "rgba(39, 39, 42, 0.8)" }}
+                whileTap={{ scale: 0.98 }}
+                className="group p-6 rounded-3xl bg-zinc-900/50 border border-white/5 hover:border-white/10 transition-colors cursor-default"
+              >
+                <div className="flex gap-5 items-center">
+                  <motion.div 
+                    whileHover={{ rotate: 5, scale: 1.1 }}
+                    className="p-4 rounded-2xl bg-white/5 group-hover:bg-white/10 transition-colors"
+                  >
+                    {feature.icon}
+                  </motion.div>
+                  <div>
+                    <h4 className="font-bold text-lg mb-1">{feature.title}</h4>
+                    <p className="text-sm text-zinc-400 leading-relaxed">{feature.description}</p>
+                  </div>
                 </div>
-                <div>
-                  <h4 className="font-bold mb-1">{feature.title}</h4>
-                  <p className="text-sm text-zinc-400 leading-relaxed">{feature.description}</p>
-                </div>
-              </div>
-            </motion.div>
-          ))}
+              </motion.div>
+            ))}
+          </div>
         </section>
 
         {/* Purpose Section */}
-        <section className="mb-16 p-8 rounded-3xl bg-gradient-to-b from-zinc-900 to-black border border-white/5">
+        <motion.section 
+          initial={{ opacity: 0, scale: 0.95 }}
+          whileInView={{ opacity: 1, scale: 1 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+          className="mb-16 p-8 rounded-[2.5rem] bg-gradient-to-b from-zinc-900 to-black border border-white/5"
+        >
           <h3 className="text-xl font-bold mb-4">Our Purpose</h3>
           <p className="text-zinc-400 leading-relaxed mb-4">
             The Detricon wrapper was built to bridge the gap between web and mobile. By leveraging 
@@ -95,14 +118,19 @@ export default function About() {
             adding essential mobile features like push notifications, offline support, and 
             system-level integration.
           </p>
-        </section>
+        </motion.section>
 
         {/* Get the App Section */}
         <section className="mb-16">
           <h3 className="text-sm font-bold uppercase tracking-[0.2em] text-zinc-500 mb-6">Get the App</h3>
           
           <div className="space-y-6">
-            <div className="p-6 rounded-2xl bg-white/5 border border-white/10">
+            <motion.div 
+              initial={{ opacity: 0, x: -20 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+              className="p-6 rounded-3xl bg-white/5 border border-white/10"
+            >
               <h4 className="font-bold mb-2 flex items-center gap-2">
                 <Smartphone size={18} className="text-blue-400" />
                 Option 1: Install as PWA (Recommended)
@@ -115,9 +143,14 @@ export default function About() {
                 <li>Tap the three dots (⋮) in the top right.</li>
                 <li>Select "Install app" or "Add to Home screen".</li>
               </ol>
-            </div>
+            </motion.div>
 
-            <div className="p-6 rounded-2xl bg-white/5 border border-white/10">
+            <motion.div 
+              initial={{ opacity: 0, x: 20 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+              className="p-6 rounded-3xl bg-white/5 border border-white/10"
+            >
               <h4 className="font-bold mb-2 flex items-center gap-2">
                 <Globe size={18} className="text-purple-400" />
                 Option 2: Build Native APK
@@ -125,15 +158,15 @@ export default function About() {
               <p className="text-sm text-zinc-400 mb-4">
                 To generate a shareable .apk file, you can build this project locally:
               </p>
-              <div className="bg-black rounded-xl p-4 font-mono text-[10px] text-zinc-400 overflow-x-auto">
-                <p># 1. Download the source code</p>
-                <p># 2. Install dependencies: npm install</p>
-                <p># 3. Build project: npm run build</p>
-                <p># 4. Sync Capacitor: npx cap sync</p>
-                <p># 5. Open in Android Studio: npx cap open android</p>
-                <p># 6. Build &gt; Build Bundle(s) / APK(s) &gt; Build APK(s)</p>
+              <div className="bg-black rounded-2xl p-4 font-mono text-[10px] text-zinc-400 overflow-x-auto border border-white/5">
+                <p className="opacity-50"># 1. Download the source code</p>
+                <p className="opacity-50"># 2. Install dependencies: npm install</p>
+                <p className="opacity-50"># 3. Build project: npm run build</p>
+                <p className="opacity-50"># 4. Sync Capacitor: npx cap sync</p>
+                <p className="opacity-50"># 5. Open in Android Studio: npx cap open android</p>
+                <p className="text-white"># 6. Build &gt; Build Bundle(s) / APK(s) &gt; Build APK(s)</p>
               </div>
-            </div>
+            </motion.div>
           </div>
         </section>
 

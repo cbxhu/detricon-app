@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Detricon</string>
+    <string name="title_activity_main">Detricon</string>
+    <string name="package_name">com.detricon.messenger</string>
+    <string name="custom_url_scheme">com.detricon.messenger</string>
+</resources>

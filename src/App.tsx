@@ -6,9 +6,12 @@
 import { useState, useEffect, useRef } from 'react';
 import { HashRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
-import { RefreshCw, ExternalLink, ShieldAlert, WifiOff, Bell, BellOff, Info } from 'lucide-react';
-import { requestNotificationPermission, onMessageListener } from './firebase';
+import { RefreshCw, ExternalLink, ShieldAlert, WifiOff, Bell, BellOff, Info, Settings, CheckCircle2, X } from 'lucide-react';
+import { requestNotificationPermission, onMessageListener, getNotificationStatus } from './firebase';
+import { checkUpdate, UpdateStatus, VersionInfo } from './services/updateService';
 import About from './components/About';
+import NotificationSettings from './components/NotificationSettings';
+import UpdateModal from './components/UpdateModal';
 
 const TARGET_URL = "https://detricon-messenger.vercel.app/";
 
@@ -16,30 +19,53 @@ function MainApp() {
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
-  const [notificationsEnabled, setNotificationsEnabled] = useState(false);
-  const [showNotificationPrompt, setShowNotificationPrompt] = useState(false);
+  const [isReconnecting, setIsReconnecting] = useState(false);
+  const [notificationStatus, setNotificationStatus] = useState(getNotificationStatus());
+  const [showSettings, setShowSettings] = useState(false);
+  const [updateInfo, setUpdateInfo] = useState<VersionInfo | null>(null);
+  const [activeToast, setActiveToast] = useState<{ title: string; body: string } | null>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const location = useLocation();
 
   useEffect(() => {
-    const handleOnline = () => setIsOnline(true);
-    const handleOffline = () => setIsOnline(false);
+    const handleOnline = () => {
+      setIsOnline(true);
+      setIsReconnecting(true);
+      setTimeout(() => {
+        handleRefresh();
+        setIsReconnecting(false);
+      }, 1500);
+    };
+    const handleOffline = () => {
+      setIsOnline(false);
+      setIsReconnecting(false);
+    };
 
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
 
-    // Check notification status
-    if ('Notification' in window) {
-      if (Notification.permission === 'granted') {
-        setNotificationsEnabled(true);
-      } else if (Notification.permission === 'default') {
-        setTimeout(() => setShowNotificationPrompt(true), 5000);
-      }
-    }
+    // Initial permission check
+    setNotificationStatus(getNotificationStatus());
 
+    // Check for updates
+    const performUpdateCheck = async () => {
+      const status = await checkUpdate();
+      if (status.hasUpdate && status.latestVersion) {
+        setUpdateInfo(status.latestVersion);
+      }
+    };
+    performUpdateCheck();
+
+    // Listen for foreground messages
     onMessageListener().then((payload: any) => {
-      console.log('Foreground message received:', payload);
-    }).catch(err => console.log('failed: ', err));
+      if (payload?.notification) {
+        setActiveToast({
+          title: payload.notification.title || 'New Message',
+          body: payload.notification.body || ''
+        });
+        setTimeout(() => setActiveToast(null), 5000);
+      }
+    }).catch(err => console.log('FCM listener error: ', err));
 
     return () => {
       window.removeEventListener('online', handleOnline);
@@ -47,14 +73,16 @@ function MainApp() {
     };
   }, []);
 
-  const handleEnableNotifications = async () => {
-    const token = await requestNotificationPermission();
-    if (token) {
-      setNotificationsEnabled(true);
-      setShowNotificationPrompt(false);
-      console.log('FCM Token:', token);
-    }
-  };
+  // Poll for permission changes
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const current = getNotificationStatus();
+      if (current !== notificationStatus) {
+        setNotificationStatus(current);
+      }
+    }, 2000);
+    return () => clearInterval(interval);
+  }, [notificationStatus]);
 
   const handleIframeLoad = () => {
     setIsLoading(false);
@@ -74,7 +102,7 @@ function MainApp() {
   };
 
   return (
-    <div className="fixed inset-0 bg-black text-white overflow-hidden font-sans">
+    <div className="fixed inset-0 h-[100dvh] w-screen bg-black text-white overflow-hidden font-sans flex flex-col pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
       {/* Status Bar / Header */}
       <div className="absolute top-0 left-0 right-0 z-50 flex justify-between items-center px-4 py-2 bg-black/50 backdrop-blur-md opacity-0 hover:opacity-100 transition-opacity duration-300">
         <div className="flex items-center gap-2">
@@ -82,75 +110,129 @@ function MainApp() {
           <span className="text-xs font-medium tracking-wider uppercase opacity-70">Detricon Live</span>
         </div>
         <div className="flex gap-4">
-          <Link 
-            to="/about"
-            className="p-1 hover:bg-white/10 rounded-full transition-colors text-white/50 hover:text-white"
-            title="About Detricon"
+          <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
+            <Link 
+              to="/about"
+              className="p-1.5 hover:bg-white/10 rounded-full transition-colors text-white/50 hover:text-white block"
+              title="About Detricon"
+            >
+              <Info size={18} />
+            </Link>
+          </motion.div>
+          <motion.button 
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.9 }}
+            onClick={() => setShowSettings(true)}
+            className={`p-1.5 rounded-full transition-colors ${notificationStatus === 'granted' ? 'text-green-500' : 'text-white/50 hover:bg-white/10'}`}
+            title="Notification Settings"
           >
-            <Info size={16} />
-          </Link>
-          <button 
-            onClick={handleEnableNotifications}
-            className={`p-1 rounded-full transition-colors ${notificationsEnabled ? 'text-green-500' : 'text-white/50 hover:bg-white/10'}`}
-            title={notificationsEnabled ? 'Notifications Enabled' : 'Enable Notifications'}
-          >
-            {notificationsEnabled ? <Bell size={16} /> : <BellOff size={16} />}
-          </button>
-          <button 
+            {notificationStatus === 'granted' ? <Bell size={18} /> : <BellOff size={18} />}
+          </motion.button>
+          <motion.button 
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.9 }}
             onClick={handleRefresh}
-            className="p-1 hover:bg-white/10 rounded-full transition-colors"
+            className="p-1.5 hover:bg-white/10 rounded-full transition-colors"
             title="Refresh"
           >
-            <RefreshCw size={16} className={isLoading ? 'animate-spin' : ''} />
-          </button>
-          <button 
+            <RefreshCw size={18} className={isLoading ? 'animate-spin' : ''} />
+          </motion.button>
+          <motion.button 
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.9 }}
             onClick={openExternal}
-            className="p-1 hover:bg-white/10 rounded-full transition-colors"
+            className="p-1.5 hover:bg-white/10 rounded-full transition-colors"
             title="Open in Browser"
           >
-            <ExternalLink size={16} />
-          </button>
+            <ExternalLink size={18} />
+          </motion.button>
         </div>
       </div>
 
-      {/* Notification Prompt */}
+      {/* Foreground Toast */}
       <AnimatePresence>
-        {showNotificationPrompt && !notificationsEnabled && (
+        {activeToast && (
           <motion.div 
             initial={{ y: -100, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: -100, opacity: 0 }}
-            className="absolute top-4 left-4 right-4 z-[60] bg-zinc-900 border border-zinc-800 rounded-2xl p-4 shadow-2xl flex items-center justify-between"
+            className="absolute top-4 left-4 right-4 z-[250] bg-zinc-900/90 backdrop-blur-xl border border-white/10 rounded-2xl p-4 shadow-2xl flex items-center gap-4"
           >
-            <div className="flex items-center gap-3">
-              <div className="bg-white/10 p-2 rounded-xl">
-                <Bell size={20} className="text-white" />
+            <div className="bg-white/10 p-2 rounded-xl">
+              <Bell size={20} className="text-white" />
+            </div>
+            <div className="flex-1">
+              <p className="text-sm font-bold">{activeToast.title}</p>
+              <p className="text-xs text-zinc-400 line-clamp-1">{activeToast.body}</p>
+            </div>
+            <button onClick={() => setActiveToast(null)} className="text-zinc-500 hover:text-white">
+              <X size={16} />
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Notification Settings Modal */}
+      <AnimatePresence>
+        {showSettings && (
+          <NotificationSettings onClose={() => setShowSettings(false)} />
+        )}
+      </AnimatePresence>
+
+      {/* Update Modal */}
+      <AnimatePresence>
+        {updateInfo && (
+          <UpdateModal 
+            version={updateInfo} 
+            onClose={() => setUpdateInfo(null)} 
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Permission Banner (Only if not granted and not blocked) */}
+      <AnimatePresence>
+        {notificationStatus === 'default' && !showSettings && (
+          <motion.div 
+            initial={{ y: 100, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: 100, opacity: 0 }}
+            className="absolute bottom-6 left-6 right-6 z-[60] bg-white text-black rounded-3xl p-5 shadow-2xl flex items-center justify-between"
+          >
+            <div className="flex items-center gap-4">
+              <div className="bg-black/5 p-3 rounded-2xl">
+                <Bell size={24} />
               </div>
               <div>
-                <p className="text-sm font-bold">Stay Updated</p>
-                <p className="text-xs text-zinc-400">Enable notifications for messages.</p>
+                <p className="font-bold text-sm">Get real-time alerts</p>
+                <p className="text-xs opacity-60">Enable notifications for messages.</p>
               </div>
             </div>
-            <div className="flex gap-2">
-              <button 
-                onClick={() => setShowNotificationPrompt(false)}
-                className="px-3 py-1.5 text-xs font-medium text-zinc-400 hover:text-white transition-colors"
-              >
-                Later
-              </button>
-              <button 
-                onClick={handleEnableNotifications}
-                className="px-4 py-1.5 text-xs font-bold bg-white text-black rounded-lg hover:bg-zinc-200 transition-colors"
-              >
-                Enable
-              </button>
-            </div>
+            <button 
+              onClick={() => setShowSettings(true)}
+              className="px-6 py-2.5 bg-black text-white rounded-xl font-bold text-xs hover:bg-zinc-800 transition-colors"
+            >
+              Enable
+            </button>
           </motion.div>
         )}
       </AnimatePresence>
 
       {/* Main Content */}
       <div className="relative w-full h-full">
+        <AnimatePresence>
+          {isReconnecting && (
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 z-[45] flex flex-col items-center justify-center bg-black/60 backdrop-blur-sm"
+            >
+              <RefreshCw size={32} className="animate-spin mb-4 text-white" />
+              <p className="text-sm font-medium tracking-widest uppercase">Reconnecting...</p>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         {!isOnline ? (
           <div className="absolute inset-0 z-40 flex flex-col items-center justify-center bg-zinc-900 p-6 text-center">
             <WifiOff size={48} className="mb-4 text-zinc-500" />
@@ -275,11 +357,30 @@ function MainApp() {
 export default function App() {
   return (
     <Router>
-      <Routes>
-        <Route path="/" element={<MainApp />} />
-        <Route path="/about" element={<About />} />
-      </Routes>
+      <AppContent />
     </Router>
+  );
+}
+
+function AppContent() {
+  const location = useLocation();
+  
+  return (
+    <AnimatePresence mode="wait">
+      <motion.div 
+        key={location.pathname} 
+        className="h-full w-full"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: 0.2 }}
+      >
+        <Routes location={location}>
+          <Route path="/" element={<MainApp />} />
+          <Route path="/about" element={<About />} />
+        </Routes>
+      </motion.div>
+    </AnimatePresence>
   );
 }
 
