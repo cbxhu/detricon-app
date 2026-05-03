@@ -14,6 +14,9 @@ import android.webkit.WebViewClient;
 import android.webkit.ServiceWorkerController;
 import android.webkit.ServiceWorkerWebSettings;
 import android.widget.ProgressBar;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowInsetsCompat;
+import androidx.core.graphics.Insets;
 import com.getcapacitor.BridgeActivity;
 
 public class MainActivity extends BridgeActivity {
@@ -33,6 +36,15 @@ public class MainActivity extends BridgeActivity {
                 }
             }
             super.onCreate(savedInstanceState);
+            
+            // Handle Window Insets (Status Bar Overlap)
+            View mainView = findViewById(android.R.id.content);
+            ViewCompat.setOnApplyWindowInsetsListener(mainView, (v, windowInsets) -> {
+                Insets insets = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars());
+                // Apply the top inset as padding to the root view to move content below status bar
+                v.setPadding(0, insets.top, 0, 0);
+                return WindowInsetsCompat.CONSUMED;
+            });
         } catch (Exception e) {
             Log.e(TAG, "Fatal crash during BridgeActivity initialization: " + e.getLocalizedMessage());
             return;
